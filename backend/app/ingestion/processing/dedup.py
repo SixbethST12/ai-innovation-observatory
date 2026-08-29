@@ -2,15 +2,12 @@
 Dedup.
 
 Two responsibilities:
-  1. Fingerprint each record (fully working now) - uses the
-     content_hash property already built into RawPublication.
-  2. Check that fingerprint against stored records (NOT yet wired to
-     a real database - db/ doesn't exist yet). is_duplicate() below
-     is a placeholder that always returns False until the database
-     layer is built; this will be replaced with a real query then.
+  1. Fingerprint each record - uses the content_hash property already
+     built into RawPublication.
+  2. Check that fingerprint against stored records - now wired to the
+     real database via db/repository.py.
 
-This satisfies FR-4 (detect and discard duplicates) once the
-placeholder is replaced with a real DB check.
+Satisfies FR-4 (detect and discard duplicates).
 """
 
 from typing import List
@@ -25,19 +22,21 @@ except ImportError:
 
 
 def is_duplicate(content_hash: str) -> bool:
-    """
-    PLACEHOLDER - always returns False for now.
-    Once db/ exists, this will query the publications table:
-        SELECT 1 FROM publications WHERE content_hash = ? LIMIT 1
-    """
-    return False
+    """Real DB-backed dedup check."""
+    try:
+        from ...db.repository import publication_exists
+    except ImportError:
+        import sys
+        import os
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        from db.repository import publication_exists
+    return publication_exists(content_hash)
 
 
 def deduplicate(records: List[RawPublication]) -> List[RawPublication]:
     """
     Filters out records already seen - either duplicates within this
-    same batch (two sources reporting the same URL), or records
-    already stored (once is_duplicate() is real).
+    same batch, or records already stored in the database.
     """
     seen_hashes = set()
     unique_records = []
@@ -71,7 +70,7 @@ if __name__ == "__main__":
     record_a_duplicate = RawPublication(
         title="Publication A (same URL, different title text)",
         institution="TEST",
-        source_url="https://example.com/a",   # same URL -> same hash
+        source_url="https://example.com/a",
         published_date=datetime.now(),
     )
     record_b = RawPublication(
