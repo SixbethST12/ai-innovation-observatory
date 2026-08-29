@@ -27,7 +27,7 @@ except ImportError:
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     from pipeline import run_ingestion, store_records
 
-INTERVAL_SECONDS = 30  # TESTING ONLY - change before production
+INTERVAL_SECONDS = 21600  # 6 hours - production interval
 
 
 def scheduled_job():
