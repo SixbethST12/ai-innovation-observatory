@@ -1,22 +1,18 @@
 """
 IMF source client - Consumer Price Index (CPI) data, one record per country.
 
-Restructured from the original single-record design: now produces one
-RawPublication per country instead of packaging the whole pull into
-one record, so this behaves more like a normal multi-record source.
+40 countries total: original 20 (Tanzania/EAC/Africa/major economies)
+plus 20 more covering Latin America, Europe, additional Asia, Middle
+East, and Oceania - broader global comparison context for BOT.
 
-20 countries: Tanzania + EAC peers (regional relevance), other African
-economies, and major global economies (comparison context).
-
-Endpoint confirmed working, no auth required (verified in this project
-via a real successful pull of Tanzania/Kenya/Uganda data):
+Endpoint confirmed working, no auth required:
   https://api.imf.org/external/sdmx/3.0/data/dataflow/{agency}/{dataflow}/{version}/{key}
 Gotchas confirmed from documentation:
   - version wildcard is "~" not "*"
   - country codes must be ISO alpha-3
   - a country with no data returns 0 rows for that country silently,
-    not an error - not every one of the 20 below is guaranteed to
-    have current CPI data available.
+    not an error - not every country below is guaranteed to have
+    current CPI data available.
 """
 
 from datetime import datetime
@@ -43,16 +39,22 @@ class IMFClient(SourceClient):
     BASE_URL = "https://api.imf.org/external/sdmx/3.0/data/dataflow/IMF.STA/CPI/~/"
 
     COUNTRIES = [
-        "TZA", "KEN", "UGA", "RWA", "BDI",           # EAC / regional
-        "ZAF", "NGA", "EGY", "GHA", "ETH", "MOZ", "ZMB",  # other African economies
-        "USA", "GBR", "CHN", "IND", "BRA", "JPN", "DEU", "FRA",  # major global economies
+        # Original 20
+        "TZA", "KEN", "UGA", "RWA", "BDI",
+        "ZAF", "NGA", "EGY", "GHA", "ETH", "MOZ", "ZMB",
+        "USA", "GBR", "CHN", "IND", "BRA", "JPN", "DEU", "FRA",
+        # 20 new: Latin America, Europe, Asia, Middle East, Oceania, more Africa
+        "MEX", "ARG", "CHL", "COL", "PER",
+        "ITA", "ESP", "NLD", "SWE", "CHE",
+        "IDN", "KOR", "THA", "VNM", "PHL",
+        "SAU", "ARE", "TUR", "AUS", "MAR",
     ]
     KEY = "+".join(COUNTRIES) + ".CPI._T.IX.M"
 
     def fetch(self) -> List[RawPublication]:
         url = f"{self.BASE_URL}{self.KEY}"
         params = {"c[TIME_PERIOD]": "ge:2024-01"}
-        response = requests.get(url, params=params, headers={"Accept": "text/csv"}, timeout=20)
+        response = requests.get(url, params=params, headers={"Accept": "text/csv"}, timeout=25)
         response.raise_for_status()
 
         reader = csv.DictReader(io.StringIO(response.text))
@@ -62,7 +64,6 @@ class IMFClient(SourceClient):
             print("[IMF] Query returned 0 rows total")
             return []
 
-        # Group rows by country so we can build one record per country
         by_country = defaultdict(list)
         for r in rows:
             country = r.get("COUNTRY", "?")
@@ -72,7 +73,7 @@ class IMFClient(SourceClient):
         results = []
 
         for country, country_rows in by_country.items():
-            recent = country_rows[-6:]  # last 6 available data points
+            recent = country_rows[-6:]
             lines = [f"{r.get('TIME_PERIOD', '?')}: {r.get('OBS_VALUE', '?')}" for r in recent]
             body = f"IMF CPI (Consumer Price Index) for {country}:\n" + "\n".join(lines)
 
@@ -92,7 +93,6 @@ class IMFClient(SourceClient):
 
 
 if __name__ == "__main__":
-    # Run directly to see real IMF CPI data per country: python3 imf.py
     client = IMFClient()
     records = client.safe_fetch()
     print(f"\nFetched {len(records)} record(s) from IMF")
