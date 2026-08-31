@@ -85,5 +85,5 @@ if __name__ == "__main__":
     client = WorldBankClient()
     records = client.safe_fetch()
     print(f"Fetched {len(records)} records from World Bank")
-    for r in records[:3]:
+    for r in records[:6]:
         print("-", r.title, "|", r.source_url)

@@ -1,30 +1,27 @@
 """
-IMF source client - Consumer Price Index (CPI) data.
+IMF source client - Consumer Price Index (CPI) data, one record per country.
 
-IMPORTANT DESIGN NOTE: IMF does not have a working publications/RSS
-feed (confirmed - old feed URLs are dead, imf.org/en/news/rss is
-JavaScript-rendered with no discoverable feed). What IMF DOES have is
-a real, documented statistical data API (SDMX), confirmed against a
-live example with real sample output:
-  https://bd-econ.com/imfapi2.html
+Restructured from the original single-record design: now produces one
+RawPublication per country instead of packaging the whole pull into
+one record, so this behaves more like a normal multi-record source.
 
-This is fundamentally different data than BIS/World Bank/CBK - it's
-numeric time-series (CPI values), not documents with their own titles
-and URLs. This client pulls real CPI data for Tanzania and regional
-peers, then packages the ENTIRE PULL as one synthetic publication-like
-record - a genuine stretch of RawPublication's shape, done deliberately
-and documented here rather than silently.
+20 countries: Tanzania + EAC peers (regional relevance), other African
+economies, and major global economies (comparison context).
 
-Endpoint pattern (confirmed working, Jan 2026 documentation):
+Endpoint confirmed working, no auth required (verified in this project
+via a real successful pull of Tanzania/Kenya/Uganda data):
   https://api.imf.org/external/sdmx/3.0/data/dataflow/{agency}/{dataflow}/{version}/{key}
 Gotchas confirmed from documentation:
-  - version wildcard is "~" not "*" (using * causes a 500 error)
-  - country codes must be ISO alpha-3 (TZA, not TZ)
-  - an invalid code returns HTTP 200 with zero data rows - not an error
+  - version wildcard is "~" not "*"
+  - country codes must be ISO alpha-3
+  - a country with no data returns 0 rows for that country silently,
+    not an error - not every one of the 20 below is guaranteed to
+    have current CPI data available.
 """
 
 from datetime import datetime
 from typing import List
+from collections import defaultdict
 import csv
 import io
 import requests
@@ -44,46 +41,60 @@ class IMFClient(SourceClient):
     institution = "IMF"
 
     BASE_URL = "https://api.imf.org/external/sdmx/3.0/data/dataflow/IMF.STA/CPI/~/"
-    # Tanzania, Kenya, Uganda - CPI, All items, Index, Monthly
-    KEY = "TZA+KEN+UGA.CPI._T.IX.M"
+
+    COUNTRIES = [
+        "TZA", "KEN", "UGA", "RWA", "BDI",           # EAC / regional
+        "ZAF", "NGA", "EGY", "GHA", "ETH", "MOZ", "ZMB",  # other African economies
+        "USA", "GBR", "CHN", "IND", "BRA", "JPN", "DEU", "FRA",  # major global economies
+    ]
+    KEY = "+".join(COUNTRIES) + ".CPI._T.IX.M"
 
     def fetch(self) -> List[RawPublication]:
         url = f"{self.BASE_URL}{self.KEY}"
         params = {"c[TIME_PERIOD]": "ge:2024-01"}
-        response = requests.get(url, params=params, headers={"Accept": "text/csv"}, timeout=15)
+        response = requests.get(url, params=params, headers={"Accept": "text/csv"}, timeout=20)
         response.raise_for_status()
 
         reader = csv.DictReader(io.StringIO(response.text))
         rows = list(reader)
 
         if not rows:
-            # Confirmed possible per docs: invalid codes return 200 with 0 rows
-            print("[IMF] Query returned 0 rows - check country/indicator codes")
+            print("[IMF] Query returned 0 rows total")
             return []
 
-        # Package the whole pull as one record, since this is time-series
-        # data, not a set of individual documents.
-        lines = [f"{r.get('COUNTRY', '?')} {r.get('TIME_PERIOD', '?')}: {r.get('OBS_VALUE', '?')}" for r in rows[-15:]]
-        summary_text = "IMF CPI (Consumer Price Index) data for Tanzania, Kenya, Uganda:\n" + "\n".join(lines)
+        # Group rows by country so we can build one record per country
+        by_country = defaultdict(list)
+        for r in rows:
+            country = r.get("COUNTRY", "?")
+            by_country[country].append(r)
 
         today = datetime.now().strftime("%Y-%m-%d")
-        record = RawPublication(
-            title=f"IMF CPI Data Update - TZA/KEN/UGA - pulled {today}",
-            institution=self.institution,
-            source_url=f"{url}?asof={today}",   # date included so each day's pull is a distinct record
-            published_date=datetime.now(),
-            document_type="economic_data",
-            body_text=summary_text,
-            raw_metadata={"row_count": len(rows), "dataflow": "CPI"},
-        )
-        return [record]
+        results = []
+
+        for country, country_rows in by_country.items():
+            recent = country_rows[-6:]  # last 6 available data points
+            lines = [f"{r.get('TIME_PERIOD', '?')}: {r.get('OBS_VALUE', '?')}" for r in recent]
+            body = f"IMF CPI (Consumer Price Index) for {country}:\n" + "\n".join(lines)
+
+            record = RawPublication(
+                title=f"IMF CPI Data - {country} - pulled {today}",
+                institution=self.institution,
+                source_url=f"{url}?country={country}&asof={today}",
+                published_date=datetime.now(),
+                document_type="economic_data",
+                body_text=body,
+                raw_metadata={"country": country, "row_count": len(country_rows), "dataflow": "CPI"},
+            )
+            results.append(record)
+
+        print(f"[IMF] {len(rows)} total rows returned, covering {len(by_country)} of {len(self.COUNTRIES)} requested countries")
+        return results
 
 
 if __name__ == "__main__":
-    # Run directly to see real IMF CPI data: python3 imf.py
+    # Run directly to see real IMF CPI data per country: python3 imf.py
     client = IMFClient()
     records = client.safe_fetch()
-    print(f"Fetched {len(records)} record(s) from IMF")
+    print(f"\nFetched {len(records)} record(s) from IMF")
     for r in records:
         print("-", r.title)
-        print(r.body_text)
