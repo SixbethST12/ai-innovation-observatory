@@ -39,7 +39,7 @@ class WorldBankClient(SourceClient):
     DEFAULT_PARAMS = {
         "format": "json",
         "qterm": "central bank",
-        "rows": 20,
+        "rows": 10,
     }
 
     def fetch(self) -> List[RawPublication]:
