@@ -1,9 +1,22 @@
 """
 BIS (Bank for International Settlements) source client.
 
-BIS publishes an RSS feed covering publications, speeches, and press
-releases. FR-1 names BIS as one of the mandatory sources; EIR-1 says
-access is via API, RSS, or web page — BIS's case is RSS.
+IMPORTANT: BIS restructured their site on/around 2026-08-31, breaking
+the previous publications RSS feed (bis.org/doclist/*.rss - confirmed
+dead via curl, BIS's own server returns a real 404 page for these
+paths now). This client instead uses BIS's statistics release
+calendar feed (data.bis.org/feed.xml, confirmed live via curl - HTTP
+200, real XML), a genuinely different feed covering statistical
+release announcements (exchange rates, policy rates, etc.) rather
+than narrative publications/speeches.
+
+KNOWN BEHAVIOR: This feed repeats the same link (e.g. .../topics/XRU)
+across multiple weekly releases with different pubDate values. Since
+content_hash (models.py) hashes on source_url alone, only the FIRST
+occurrence of each topic link gets stored - later re-releases of the
+same topic are treated as duplicates by design, not by bug. This
+means the DB tracks "this release type has been seen" rather than
+every individual weekly release event.
 """
 
 from datetime import datetime
@@ -24,7 +37,7 @@ except ImportError:
 class BISClient(SourceClient):
     institution = "BIS"
 
-    FEED_URL = "https://www.bis.org/doclist/rss_all_categories.rss"
+    FEED_URL = "https://data.bis.org/feed.xml"
 
     def fetch(self) -> List[RawPublication]:
         feed = feedparser.parse(self.FEED_URL)
@@ -41,18 +54,18 @@ class BISClient(SourceClient):
                     institution=self.institution,
                     source_url=entry.get("link", ""),
                     published_date=published,
-                    document_type="publication",
+                    document_type="statistical_release",
                     body_text=entry.get("summary", ""),
-                    raw_metadata={"feed_source": self.FEED_URL},
+                    raw_metadata={"feed_source": self.FEED_URL, "category": entry.get("category", "")},
                 )
             )
         return results
 
 
 if __name__ == "__main__":
-    # Run this directly to see real BIS publications: python3 bis.py
+    # Run directly to see real BIS statistical release data: python3 bis.py
     client = BISClient()
     records = client.safe_fetch()
     print(f"Fetched {len(records)} records from BIS")
-    for r in records[:3]:
-        print("-", r.title, "|", r.source_url)
+    for r in records[:5]:
+        print("-", r.title, "|", r.published_date)
