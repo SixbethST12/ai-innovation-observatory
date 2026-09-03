@@ -64,3 +64,17 @@ if __name__ == "__main__":
     print("Columns in 'publications':")
     for col in inspector.get_columns("publications"):
         print(f"  - {col['name']} ({col['type']})")
+
+class Trend(Base):
+    __tablename__ = "trends"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    topic = Column(String, nullable=False)
+    time_window = Column(String, nullable=False)  # e.g. "2026-08" (year-month)
+    publication_count = Column(Integer, default=0)
+    is_emerging = Column(Boolean, default=False)
+    computed_at = Column(DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<Trend topic={self.topic} window={self.time_window} count={self.publication_count} emerging={self.is_emerging}>"
+
