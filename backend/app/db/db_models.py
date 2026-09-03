@@ -41,6 +41,7 @@ class Publication(Base):
     processed = Column(Boolean, default=False)
     summary = Column(Text, nullable=True)
     relevance_note = Column(Text, nullable=True)
+    topics = Column(Text, nullable=True)  # comma-separated, e.g. "Monetary Policy,Financial Stability"
 
     def __repr__(self):
         return f"<Publication id={self.id} institution={self.institution} title={self.title[:40]!r}>"
