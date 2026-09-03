@@ -44,3 +44,25 @@ consequence of that choice, not an implementation mistake.
   investigated earlier in this project) instead of Ollama would
   likely resolve most of the above, at the cost of needing an API key
   and internet dependency for the AI layer.
+
+## Additional issues found during live scheduler operation (2026-09-03)
+
+| File | Issue found | Example | Resolution |
+|---|---|---|---|
+| `summarize.py` | Country code confusion | IMF CPI data for UGA (Uganda) summarized as "United Kingdom (UK)" | Not fixed - documented as a known entity-confusion limitation |
+| `summarize.py` | Prompt-instruction echo | Summary output began "The summary should be concise, focusing on the key facts..." - echoing the instruction itself rather than summarizing content | Not fixed - documented as a known limitation |
+
+## Real operational incident (2026-09-03)
+
+An unhandled `requests.exceptions.ReadTimeout` in `llm_client.py` crashed
+the entire background scheduler process when one Ollama call exceeded
+the 60s timeout - killing all future scheduled cycles, not just that
+one record. Root cause: only `ConnectionError` was caught, not
+`Timeout`. Fixed by adding a distinct `OllamaTimeoutError`, raising
+the timeout to 120s, and updating `processor.py` to skip a timed-out
+record (continue) rather than crash the batch (previously conflated
+with "Ollama is down", which correctly still stops the batch via
+`OllamaNotRunningError`). This is the same failure-isolation principle
+`base_client.py` already applied to ingestion (NFR-5) - initially
+missed in the AI layer, found via a real production-like crash, and
+fixed the same way.
