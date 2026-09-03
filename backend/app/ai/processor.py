@@ -2,10 +2,12 @@
 AI processor - orchestrates summarize + classify + relevance for real
 stored publications, writes results back to the database.
 
-Default batch size is small (5) deliberately - each record needs 3
-separate Ollama calls, and on limited CPU hardware each call takes
-several seconds. Processing all 174 stored records at once could
-take 30-60+ minutes. Start small, confirm correctness, scale up.
+FIX (following the same real incident documented in llm_client.py):
+now distinguishes OllamaTimeoutError (skip this one record, continue
+to the next - it stays unprocessed and will be retried next cycle)
+from OllamaNotRunningError (Ollama is completely down - stop the
+whole batch, since every subsequent call would fail the same way).
+Previously, a timeout on ONE record crashed the entire scheduler.
 """
 
 import time
@@ -14,7 +16,7 @@ try:
     from .summarize import summarize
     from .classify import classify
     from .relevance import assess_relevance
-    from .llm_client import OllamaNotRunningError
+    from .llm_client import OllamaNotRunningError, OllamaTimeoutError
 except ImportError:
     import sys
     import os
@@ -22,7 +24,7 @@ except ImportError:
     from summarize import summarize
     from classify import classify
     from relevance import assess_relevance
-    from llm_client import OllamaNotRunningError
+    from llm_client import OllamaNotRunningError, OllamaTimeoutError
 
 try:
     from ..db.repository import get_unprocessed_publications, save_ai_results
@@ -34,10 +36,6 @@ except ImportError:
 
 
 def process_batch(limit: int = 5):
-    """
-    Fetches up to `limit` unprocessed publications, runs all three AI
-    tasks on each, saves results back to the database.
-    """
     records = get_unprocessed_publications(limit=limit)
 
     if not records:
@@ -45,6 +43,7 @@ def process_batch(limit: int = 5):
         return
 
     print(f"Processing {len(records)} record(s)...\n")
+    skipped_count = 0
 
     for i, record in enumerate(records, 1):
         start = time.time()
@@ -63,9 +62,17 @@ def process_batch(limit: int = 5):
             print(f"  -> Relevance: {relevance[:80]}...")
             print(f"  -> Done in {elapsed:.1f}s\n")
 
+        except OllamaTimeoutError as e:
+            print(f"  -> SKIPPED (timeout): {e}\n")
+            skipped_count += 1
+            continue
+
         except OllamaNotRunningError as e:
-            print(f"  -> STOPPED: {e}")
+            print(f"  -> STOPPED (Ollama down): {e}")
             break
+
+    if skipped_count:
+        print(f"Note: {skipped_count} record(s) skipped due to timeout - will retry next cycle.")
 
 
 if __name__ == "__main__":
