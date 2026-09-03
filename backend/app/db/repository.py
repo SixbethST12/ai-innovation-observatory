@@ -88,3 +88,29 @@ if __name__ == "__main__":
     print(f"Second save attempt (same record): {'saved' if saved_again else 'skipped (duplicate)'}")
 
     print(f"Publications in DB after: {count_publications()}")
+
+
+def get_unprocessed_publications(limit=10):
+    """Returns up to `limit` publications where processed is False."""
+    session = get_session()
+    try:
+        return session.query(Publication).filter_by(processed=False).limit(limit).all()
+    finally:
+        session.close()
+
+
+def save_ai_results(publication_id: int, summary: str, topics: list, relevance_note: str):
+    """Writes AI-generated results back onto an existing publication row, marks it processed."""
+    session = get_session()
+    try:
+        pub = session.query(Publication).filter_by(id=publication_id).first()
+        if pub is None:
+            return False
+        pub.summary = summary
+        pub.topics = ", ".join(topics) if topics else ""
+        pub.relevance_note = relevance_note
+        pub.processed = True
+        session.commit()
+        return True
+    finally:
+        session.close()
