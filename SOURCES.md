@@ -29,3 +29,27 @@ Kept so decisions don't need to be re-discovered later.
   BIS's original feed URL died mid-project due to a site restructure;
   IMF required distinguishing between a dead RSS feed and a working
   but differently-purposed SDMX API.
+
+## Data quality caveat: BIS published_date semantics (found 2026-09-03)
+
+BIS's `data.bis.org/feed.xml` (used by `bis.py`) is explicitly a
+**"release calendar"** feed, confirmed directly from its own
+description: *"Find here the latest publication dates of BIS
+statistics. Data are released no later than the specified date."*
+
+This means `published_date` for BIS records can be a **scheduled
+future release date**, not a "this already happened" date - unlike
+every other source (World Bank, CBK, IMF), where published_date
+reflects something that has actually occurred.
+
+Found while reviewing real trend detection output: a trend window of
+"2026-11" appeared in results computed on 2026-09-03 - a future date,
+traced back to this feed's actual semantics rather than a bug in
+`trend_engine.py`.
+
+Impact: trend detection (FR-9/FR-10) treats all sources' published_date
+uniformly. For BIS specifically, an apparent "spike" could partly
+reflect scheduled future releases rather than genuine recent
+publishing activity. Not fixed in this phase - documented so it isn't
+mistaken for a bug, and so any analyst using the Trends view knows to
+interpret BIS-sourced trend spikes with this caveat in mind.
