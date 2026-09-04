@@ -7,6 +7,7 @@ require authentication).
 """
 
 from fastapi import FastAPI, Query, HTTPException, Depends, Header
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 import jwt
@@ -31,6 +32,14 @@ app = FastAPI(
     title="AI Innovation Observatory API",
     description="Central Banking & Financial Sector Intelligence - Bank of Tanzania student project",
     version="0.3.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # dev only - tighten to specific origins before real deployment
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
