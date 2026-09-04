@@ -13,7 +13,7 @@ appropriate for this project's scope.
 """
 
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, UTC
 
 try:
     from ..db.database import get_session, engine, Base
@@ -119,7 +119,7 @@ def save_trends(trends_df: pd.DataFrame) -> int:
                 time_window=row["time_window"],
                 publication_count=row["publication_count"],
                 is_emerging=row["is_emerging"],
-                computed_at=datetime.utcnow(),
+                computed_at=datetime.now(UTC),
             )
             session.add(trend)
             saved += 1
