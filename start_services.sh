@@ -24,7 +24,7 @@ if pgrep -f "python3 scheduler.py" > /dev/null; then
 else
     echo "Starting scheduler..."
     cd /workspaces/ai-innovation-observatory/backend/app/ingestion
-    nohup python3 scheduler.py > /tmp/scheduler.log 2>&1 &
+    nohup python3 -u scheduler.py > /tmp/scheduler.log 2>&1 &
     echo "Scheduler started with PID: $!"
 fi
 
