@@ -114,3 +114,54 @@ def save_ai_results(publication_id: int, summary: str, topics: list, relevance_n
         return True
     finally:
         session.close()
+
+
+def get_publications(limit=20, offset=0, topic=None, institution=None):
+    """
+    Returns publications, most recently fetched first, optionally
+    filtered by topic (partial match, since topics is comma-separated
+    text) or institution (exact match). Supports pagination via
+    limit/offset - FR-14 (filter by source, topic, date, relevance).
+    """
+    session = get_session()
+    try:
+        query = session.query(Publication)
+        if topic:
+            query = query.filter(Publication.topics.like(f"%{topic}%"))
+        if institution:
+            query = query.filter(Publication.institution == institution)
+        return query.order_by(Publication.fetched_at.desc()).offset(offset).limit(limit).all()
+    finally:
+        session.close()
+
+
+def search_publications(keyword: str, limit=20):
+    """
+    Keyword search across title, summary, and relevance_note - FR-15.
+    Simple LIKE-based search (not full-text or semantic) - adequate
+    for this project's scale (a few hundred records), documented as
+    a simplification rather than pretending it's more sophisticated.
+    """
+    session = get_session()
+    try:
+        pattern = f"%{keyword}%"
+        return session.query(Publication).filter(
+            (Publication.title.like(pattern)) |
+            (Publication.summary.like(pattern)) |
+            (Publication.relevance_note.like(pattern))
+        ).order_by(Publication.fetched_at.desc()).limit(limit).all()
+    finally:
+        session.close()
+
+
+def get_trends():
+    """Returns all computed trend records, most recent first."""
+    try:
+        from .db_models import Trend
+    except ImportError:
+        from db_models import Trend
+    session = get_session()
+    try:
+        return session.query(Trend).order_by(Trend.computed_at.desc()).all()
+    finally:
+        session.close()
