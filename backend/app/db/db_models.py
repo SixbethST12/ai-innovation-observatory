@@ -78,3 +78,15 @@ class Trend(Base):
     def __repr__(self):
         return f"<Trend topic={self.topic} window={self.time_window} count={self.publication_count} emerging={self.is_emerging}>"
 
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String, unique=True, nullable=False)
+    password_hash = Column(String, nullable=False)
+    role = Column(String, default="admin")  # admin or reviewer (SRS user roles)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<User username={self.username} role={self.role}>"
+
