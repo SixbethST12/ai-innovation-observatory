@@ -174,3 +174,25 @@ def get_publication_by_id(publication_id: int):
         return session.query(Publication).filter_by(id=publication_id).first()
     finally:
         session.close()
+
+
+def get_user_by_username(username: str):
+    """Returns a User by username, or None if not found. Used for login."""
+    try:
+        from .db_models import User
+    except ImportError:
+        from db_models import User
+    session = get_session()
+    try:
+        return session.query(User).filter_by(username=username).first()
+    finally:
+        session.close()
+
+
+def count_processed():
+    """Count of publications where processed=True. Used for admin stats."""
+    session = get_session()
+    try:
+        return session.query(Publication).filter_by(processed=True).count()
+    finally:
+        session.close()
