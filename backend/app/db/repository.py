@@ -165,3 +165,12 @@ def get_trends():
         return session.query(Trend).order_by(Trend.computed_at.desc()).all()
     finally:
         session.close()
+
+
+def get_publication_by_id(publication_id: int):
+    """Returns a single publication by ID, or None if it doesn't exist."""
+    session = get_session()
+    try:
+        return session.query(Publication).filter_by(id=publication_id).first()
+    finally:
+        session.close()
