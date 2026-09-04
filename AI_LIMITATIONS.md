@@ -66,3 +66,38 @@ with "Ollama is down", which correctly still stops the batch via
 `base_client.py` already applied to ingestion (NFR-5) - initially
 missed in the AI layer, found via a real production-like crash, and
 fixed the same way.
+
+## RESOLVED: IMF country code hallucinations (found and fixed 2026-09-04)
+
+Found via real `/search?q=inflation` API testing: IMF CPI titles/body
+text only ever contained bare ISO alpha-3 codes (e.g. "ETH", "RWA"),
+with no country name spelled out anywhere in the record. This caused
+serious, not-subtle hallucinations across many records:
+
+| Code | Actual country | Model's hallucination |
+|---|---|---|
+| ETH | Ethiopia | "Consumer Price Index for Ethereum (ETH)" - confused with the cryptocurrency |
+| RWA | Rwanda | "the region west of Afghanistan" |
+| ITA | Italy | "likely referring to Indonesia" |
+| FRA | France | "the European Union (EU) region" |
+| ESP | Spain | "European System of Central Banks" |
+| PHL | Philippines | relevance note claimed data was "specific to the East African market" |
+| NGA | Nigeria | relevance note claimed the data was "for Tanzania" |
+
+**Unlike other AI limitations in this document, this one was genuinely
+fixed, not just documented as an accepted ceiling:**
+
+1. `imf.py` now embeds the full country name directly in both title
+   and body_text (e.g. "IMF CPI Data - Ethiopia (ETH) - pulled...")
+   for all future pulls - removes the ambiguity at the source rather
+   than patching each AI prompt separately.
+2. All 140 existing IMF records with the old ambiguous format were
+   corrected in the database (title/body_text updated with country
+   names) and flagged `processed = False` for the AI layer to
+   regenerate summary/topics/relevance with the corrected input.
+
+This is a good example of the difference between an inherent model
+limitation (e.g. weak arithmetic - not fixable by better input) and a
+genuine data-quality bug in our own pipeline (ambiguous input causing
+avoidable hallucination - fixable by giving the model what it actually
+needs to know).
