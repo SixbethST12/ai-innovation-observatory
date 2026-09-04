@@ -40,3 +40,44 @@ header h1 { color: #1B4F72; margin: 0 0 4px 0; }
 
 .ai-disclaimer { font-size: 11px; color: #999; font-style: italic; margin-top: 8px; }
 .not-processed { color: #999; font-style: italic; font-size: 13px; }
+
+/* Tabs */
+.tabs { display: flex; gap: 4px; margin-bottom: 24px; border-bottom: 1px solid #ddd; }
+.tab {
+  padding: 10px 20px; border: none; background: none; cursor: pointer;
+  font-size: 15px; color: #666; border-bottom: 3px solid transparent;
+}
+.tab.active { color: #1B4F72; border-bottom-color: #1B4F72; font-weight: 600; }
+
+/* Search */
+.search-bar { display: flex; gap: 8px; margin-bottom: 16px; }
+.search-bar input {
+  flex: 1; padding: 10px 14px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px;
+}
+.search-bar button {
+  padding: 10px 18px; border: none; border-radius: 6px; background: #1B4F72;
+  color: white; cursor: pointer; font-size: 14px;
+}
+.search-bar .clear-btn { background: #999; }
+
+/* Filter buttons */
+.filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+.filter-btn {
+  padding: 6px 14px; border: 1px solid #ccc; border-radius: 16px;
+  background: white; cursor: pointer; font-size: 13px; color: #555;
+}
+.filter-btn.active { background: #1B4F72; color: white; border-color: #1B4F72; }
+
+/* Trends */
+.trend-list { display: flex; flex-direction: column; gap: 12px; }
+.trend-card {
+  background: white; border-radius: 8px; padding: 14px 18px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 4px solid #ccc;
+}
+.trend-card.emerging { border-left-color: #E67E22; background: #FEF9E7; }
+.trend-topic { font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+.emerging-badge {
+  background: #E67E22; color: white; font-size: 10px; padding: 2px 8px;
+  border-radius: 10px; font-weight: 700;
+}
+.trend-detail { color: #666; font-size: 13px; margin-top: 4px; }
