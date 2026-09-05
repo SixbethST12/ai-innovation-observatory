@@ -15,7 +15,7 @@ import jwt
 try:
     from ..db.repository import (
         get_publications, search_publications, get_trends, get_publication_by_id,
-        get_user_by_username, count_publications, count_processed,
+        get_user_by_username, count_publications, count_processed, get_stats_by_institution,
     )
     from .auth import verify_password, create_token, decode_token
 except ImportError:
@@ -24,7 +24,7 @@ except ImportError:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from db.repository import (
         get_publications, search_publications, get_trends, get_publication_by_id,
-        get_user_by_username, count_publications, count_processed,
+        get_user_by_username, count_publications, count_processed, get_stats_by_institution,
     )
     from auth import verify_password, create_token, decode_token
 
@@ -126,6 +126,23 @@ def get_publication(publication_id: int):
 def search(q: str = Query(..., min_length=2), limit: int = Query(default=20, le=100)):
     results = search_publications(keyword=q, limit=limit)
     return {"query": q, "count": len(results), "results": [publication_to_dict(p) for p in results]}
+
+
+@app.get("/stats")
+def public_stats():
+    """Public overview stats for the dashboard - not an admin function, just aggregate counts."""
+    total = count_publications()
+    processed = count_processed()
+    by_institution = get_stats_by_institution()
+    trends = get_trends()
+    emerging_count = len([t for t in trends if t.is_emerging])
+    return {
+        "total_publications": total,
+        "processed": processed,
+        "unprocessed": total - processed,
+        "by_institution": by_institution,
+        "emerging_trends": emerging_count,
+    }
 
 
 @app.get("/trends")

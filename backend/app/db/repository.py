@@ -196,3 +196,16 @@ def count_processed():
         return session.query(Publication).filter_by(processed=True).count()
     finally:
         session.close()
+
+
+def get_stats_by_institution():
+    """Returns publication counts grouped by institution - for dashboard stat cards."""
+    from sqlalchemy import func
+    session = get_session()
+    try:
+        results = session.query(
+            Publication.institution, func.count(Publication.id)
+        ).group_by(Publication.institution).all()
+        return {institution: count for institution, count in results}
+    finally:
+        session.close()
