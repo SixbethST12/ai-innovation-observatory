@@ -1,9 +1,25 @@
 #!/bin/bash
 # Starts everything needed for the full system: Ollama, the ingestion
 # scheduler, the backend API, and the frontend dev server.
-# Safe to run every time you reopen this Codespace - each check
-# detects if a service is already running before starting a new one,
-# so re-running this never creates duplicates or loses progress.
+# Safe to run every time you reopen this Codespace.
+
+PROJECT_ROOT="/workspaces/ai-innovation-observatory"
+source "$PROJECT_ROOT/venv/bin/activate"
+
+# Retries a health check a few times instead of guessing one fixed
+# sleep duration - avoids false "failed to start" warnings when a
+# service just needs a couple extra seconds.
+wait_for_url() {
+    local url=$1
+    local attempts=8
+    for i in $(seq 1 $attempts); do
+        if curl -s "$url" > /dev/null; then
+            return 0
+        fi
+        sleep 1
+    done
+    return 1
+}
 
 echo "=== Checking Ollama ==="
 if curl -s http://localhost:11434 > /dev/null; then
@@ -11,8 +27,7 @@ if curl -s http://localhost:11434 > /dev/null; then
 else
     echo "Starting Ollama..."
     ollama serve > /tmp/ollama.log 2>&1 &
-    sleep 3
-    if curl -s http://localhost:11434 > /dev/null; then
+    if wait_for_url http://localhost:11434; then
         echo "Ollama started successfully."
     else
         echo "WARNING: Ollama did not start correctly - check /tmp/ollama.log"
@@ -25,7 +40,7 @@ if pgrep -f "python3 -u scheduler.py" > /dev/null; then
     echo "Scheduler already running."
 else
     echo "Starting scheduler..."
-    cd /workspaces/ai-innovation-observatory/backend/app/ingestion
+    cd "$PROJECT_ROOT/backend/app/ingestion"
     nohup python3 -u scheduler.py > /tmp/scheduler.log 2>&1 &
     echo "Scheduler started with PID: $!"
 fi
@@ -36,10 +51,9 @@ if curl -s http://localhost:8000/ > /dev/null; then
     echo "Backend API already running."
 else
     echo "Starting backend API..."
-    cd /workspaces/ai-innovation-observatory
-    nohup uvicorn backend.app.api.main:app --reload --host 0.0.0.0 --port 8000 > /tmp/api.log 2>&1 &
-    sleep 2
-    if curl -s http://localhost:8000/ > /dev/null; then
+    cd "$PROJECT_ROOT"
+    nohup "$PROJECT_ROOT/venv/bin/uvicorn" backend.app.api.main:app --reload --host 0.0.0.0 --port 8000 > /tmp/api.log 2>&1 &
+    if wait_for_url http://localhost:8000/; then
         echo "Backend API started successfully."
     else
         echo "WARNING: Backend API did not start correctly - check /tmp/api.log"
@@ -52,10 +66,9 @@ if curl -s http://localhost:5173/ > /dev/null; then
     echo "Frontend already running."
 else
     echo "Starting frontend..."
-    cd /workspaces/ai-innovation-observatory/frontend
+    cd "$PROJECT_ROOT/frontend"
     nohup npm run dev -- --host 0.0.0.0 > /tmp/frontend.log 2>&1 &
-    sleep 3
-    if curl -s http://localhost:5173/ > /dev/null; then
+    if wait_for_url http://localhost:5173/; then
         echo "Frontend started successfully."
     else
         echo "WARNING: Frontend did not start correctly - check /tmp/frontend.log"
@@ -65,4 +78,3 @@ fi
 echo ""
 echo "=== All checks complete ==="
 echo "Logs: /tmp/ollama.log  /tmp/scheduler.log  /tmp/api.log  /tmp/frontend.log"
-echo "Use: tail -f /tmp/<name>.log   to watch any of them live"
