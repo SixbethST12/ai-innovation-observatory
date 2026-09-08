@@ -16,6 +16,7 @@ try:
     from ..db.repository import (
         get_publications, search_publications, get_trends, get_publication_by_id,
         get_user_by_username, count_publications, count_processed, get_stats_by_institution,
+        get_topic_distribution, get_publication_timeline,
     )
     from .auth import verify_password, create_token, decode_token
 except ImportError:
@@ -25,6 +26,7 @@ except ImportError:
     from db.repository import (
         get_publications, search_publications, get_trends, get_publication_by_id,
         get_user_by_username, count_publications, count_processed, get_stats_by_institution,
+        get_topic_distribution, get_publication_timeline,
     )
     from auth import verify_password, create_token, decode_token
 
@@ -143,6 +145,16 @@ def public_stats():
         "by_institution": by_institution,
         "emerging_trends": emerging_count,
     }
+
+
+@app.get("/stats/topics")
+def topic_distribution():
+    return get_topic_distribution()
+
+
+@app.get("/stats/timeline")
+def publication_timeline():
+    return get_publication_timeline()
 
 
 @app.get("/trends")

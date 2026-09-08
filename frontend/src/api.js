@@ -23,3 +23,9 @@ export async function getTrends(emergingOnly = false) {
   if (!res.ok) throw new Error(`API returned ${res.status}`)
   return res.json()
 }
+
+export async function getStats() {
+  const res = await fetch(`${API_BASE}/stats`)
+  if (!res.ok) throw new Error(`API returned ${res.status}`)
+  return res.json()
+}

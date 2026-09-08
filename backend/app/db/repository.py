@@ -209,3 +209,48 @@ def get_stats_by_institution():
         return {institution: count for institution, count in results}
     finally:
         session.close()
+
+
+def get_topic_distribution():
+    """
+    Counts how many publications mention each topic. Topics is a
+    comma-separated column, so this splits and counts each topic
+    individually (same 'explode' logic as trend_engine.py).
+    """
+    session = get_session()
+    try:
+        rows = session.query(Publication.topics).filter(
+            Publication.topics.isnot(None), Publication.topics != ""
+        ).all()
+    finally:
+        session.close()
+
+    counts = {}
+    for (topics_str,) in rows:
+        for topic in topics_str.split(","):
+            topic = topic.strip()
+            if topic:
+                counts[topic] = counts.get(topic, 0) + 1
+    return counts
+
+
+def get_publication_timeline():
+    """
+    Counts publications per month based on fetched_at (when we
+    ingested them - published_date is unreliable for this per the
+    BIS future-date caveat documented in SOURCES.md). Returns a dict
+    of {month: count}, sorted chronologically.
+    """
+    session = get_session()
+    try:
+        rows = session.query(Publication.fetched_at).filter(
+            Publication.fetched_at.isnot(None)
+        ).all()
+    finally:
+        session.close()
+
+    counts = {}
+    for (fetched_at,) in rows:
+        month = fetched_at.strftime("%Y-%m")
+        counts[month] = counts.get(month, 0) + 1
+    return dict(sorted(counts.items()))

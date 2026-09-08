@@ -1,36 +1,34 @@
 import { useState } from 'react'
+import Sidebar from './components/Sidebar'
+import OverviewPage from './components/OverviewPage'
 import PublicationsView from './components/PublicationsView'
 import TrendsView from './components/TrendsView'
 import './App.css'
 
+const PAGE_TITLES = {
+  overview: 'Overview',
+  publications: 'Publications',
+  trends: 'Trends',
+}
+
 function App() {
-  const [activeTab, setActiveTab] = useState('publications')
+  const [activePage, setActivePage] = useState('overview')
 
   return (
-    <div className="app">
-      <header>
-        <h1>AI Innovation Observatory</h1>
-        <p className="subtitle">Central Banking &amp; Financial Sector Intelligence — Bank of Tanzania</p>
-      </header>
+    <div className="dashboard">
+      <Sidebar activePage={activePage} onNavigate={setActivePage} />
 
-      <nav className="tabs">
-        <button
-          className={activeTab === 'publications' ? 'tab active' : 'tab'}
-          onClick={() => setActiveTab('publications')}
-        >
-          Publications
-        </button>
-        <button
-          className={activeTab === 'trends' ? 'tab active' : 'tab'}
-          onClick={() => setActiveTab('trends')}
-        >
-          Trends
-        </button>
-      </nav>
+      <div className="main-content">
+        <div className="content-header">
+          <h1>{PAGE_TITLES[activePage]}</h1>
+        </div>
 
-      <main>
-        {activeTab === 'publications' ? <PublicationsView /> : <TrendsView />}
-      </main>
+        <div className="content-body">
+          {activePage === 'overview' && <OverviewPage />}
+          {activePage === 'publications' && <PublicationsView />}
+          {activePage === 'trends' && <TrendsView />}
+        </div>
+      </div>
     </div>
   )
 }
