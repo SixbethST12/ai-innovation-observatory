@@ -1,20 +1,11 @@
 """
 Scheduler.
 
-Automates the full pipeline on one timer:
-  1. Ingestion: fetch -> normalize -> dedup -> store (FR-2)
-  2. AI processing: summarize -> classify -> relevance (FR-5, FR-7,
-     FR-8, FR-11) for a batch of unprocessed records (capped per
-     cycle, gradual catch-up)
-  3. Trend computation: recompute topic frequency + emerging flags
-     (FR-9, FR-10) - fast (seconds), so this runs in full every cycle,
-     no batching needed like the AI step.
-
-IMPORTANT: Ollama must be running (`ollama serve`) for step 2 to work.
-If it isn't, that step is skipped for the cycle (logged clearly) but
-ingestion and trend computation still complete normally - failure in
-one stage doesn't block the others (same principle as
-base_client.py's safe_fetch, and the timeout fix in llm_client.py).
+TEMPORARY: INGESTION_PAUSED = True below - stops pulling new records
+so the AI processing backlog can catch up (IMF alone adds ~40/day,
+outpacing AI processing capacity). AI processing and trend
+computation keep running normally. Set back to False to resume
+normal ingestion once the backlog clears.
 """
 
 from apscheduler.schedulers.blocking import BlockingScheduler
@@ -33,18 +24,22 @@ except ImportError:
     from ai.llm_client import OllamaNotRunningError
     from trends.trend_engine import compute_trends, save_trends
 
-INTERVAL_SECONDS = 21600  # 6 hours - production interval
-AI_BATCH_PER_CYCLE = 30   # process up to 30 records per cycle, not all at once
+INTERVAL_SECONDS = 21600  # 6 hours
+AI_BATCH_PER_CYCLE = 50   # raised from 30, since we're not spending cycle time on ingestion right now
+INGESTION_PAUSED = True   # <-- set back to False to resume normal ingestion
 
 
 def scheduled_job():
-    print("\n" + "=" * 50)
-    print("[scheduler] Running ingestion job...")
-    print("=" * 50)
-    records = run_ingestion()
-    saved = store_records(records)
-    print(f"[scheduler] Ingestion complete: {saved} new record(s) saved, "
-          f"{len(records) - saved} already existed")
+    if INGESTION_PAUSED:
+        print("\n[scheduler] Ingestion PAUSED - skipping fetch/store, clearing AI backlog instead")
+    else:
+        print("\n" + "=" * 50)
+        print("[scheduler] Running ingestion job...")
+        print("=" * 50)
+        records = run_ingestion()
+        saved = store_records(records)
+        print(f"[scheduler] Ingestion complete: {saved} new record(s) saved, "
+              f"{len(records) - saved} already existed")
 
     print(f"\n[scheduler] Running AI processing job (up to {AI_BATCH_PER_CYCLE} records)...")
     try:
@@ -69,8 +64,8 @@ def scheduled_job():
 
 if __name__ == "__main__":
     print(f"[scheduler] Starting - job will run every {INTERVAL_SECONDS} seconds")
+    print(f"[scheduler] Ingestion paused: {INGESTION_PAUSED}")
     print(f"[scheduler] AI processing: up to {AI_BATCH_PER_CYCLE} records per cycle")
-    print("[scheduler] NOTE: Ollama must be running (ollama serve) for AI processing to work")
     print("[scheduler] Press Ctrl+C to stop\n")
 
     scheduled_job()

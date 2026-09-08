@@ -1,33 +1,30 @@
 import { useState } from 'react'
+import Navbar from './components/Navbar'
 import Sidebar from './components/Sidebar'
 import OverviewPage from './components/OverviewPage'
 import PublicationsView from './components/PublicationsView'
 import TrendsView from './components/TrendsView'
 import './App.css'
 
-const PAGE_TITLES = {
-  overview: 'Overview',
-  publications: 'Publications',
-  trends: 'Trends',
-}
-
 function App() {
   const [activePage, setActivePage] = useState('overview')
+  const [searchQuery, setSearchQuery] = useState(null)
+
+  function handleNavbarSearch(query) {
+    setSearchQuery(query)
+    setActivePage('publications')
+  }
 
   return (
-    <div className="dashboard">
-      <Sidebar activePage={activePage} onNavigate={setActivePage} />
-
-      <div className="main-content">
-        <div className="content-header">
-          <h1>{PAGE_TITLES[activePage]}</h1>
-        </div>
-
-        <div className="content-body">
+    <div className="app-shell">
+      <Navbar onSearch={handleNavbarSearch} />
+      <div className="app-body">
+        <Sidebar activePage={activePage} onNavigate={(page) => { setActivePage(page); setSearchQuery(null) }} />
+        <main className="main-content">
           {activePage === 'overview' && <OverviewPage />}
-          {activePage === 'publications' && <PublicationsView />}
+          {activePage === 'publications' && <PublicationsView initialSearch={searchQuery} />}
           {activePage === 'trends' && <TrendsView />}
-        </div>
+        </main>
       </div>
     </div>
   )

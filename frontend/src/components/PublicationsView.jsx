@@ -4,13 +4,13 @@ import PublicationCard from './PublicationCard'
 
 const INSTITUTIONS = ['All', 'BIS', 'World Bank', 'Central Bank of Kenya', 'IMF']
 
-function PublicationsView() {
+function PublicationsView({ initialSearch } = {}) {
   const [publications, setPublications] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [institution, setInstitution] = useState('All')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [activeSearch, setActiveSearch] = useState('')
+  const [searchQuery, setSearchQuery] = useState(initialSearch || '')
+  const [activeSearch, setActiveSearch] = useState(initialSearch || '')
 
   useEffect(() => {
     setLoading(true)

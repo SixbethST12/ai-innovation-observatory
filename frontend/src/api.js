@@ -29,3 +29,15 @@ export async function getStats() {
   if (!res.ok) throw new Error(`API returned ${res.status}`)
   return res.json()
 }
+
+export async function getTopicDistribution() {
+  const res = await fetch(`${API_BASE}/stats/topics`)
+  if (!res.ok) throw new Error(`API returned ${res.status}`)
+  return res.json()
+}
+
+export async function getTimeline() {
+  const res = await fetch(`${API_BASE}/stats/timeline`)
+  if (!res.ok) throw new Error(`API returned ${res.status}`)
+  return res.json()
+}
