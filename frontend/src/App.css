@@ -132,3 +132,27 @@ body { margin: 0; background: #F1F5F9; color: #0F172A; font-family: -apple-syste
 .filter-btn.active { background: #0B1E3D; color: white; border-color: #0B1E3D; }
 
 h2 { font-size: 14px; font-weight: 600; color: #0F172A; }
+
+/* Sidebar logo */
+.sidebar-logo { display: flex; flex-direction: column; align-items: center; padding: 0 0 20px 0; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+.logo-badge {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: linear-gradient(135deg, #D4AF37, #A9812F);
+  display: flex; align-items: center; justify-content: center;
+  color: #0B1E3D; font-weight: 800; font-size: 18px; margin-bottom: 8px;
+}
+.logo-text { font-size: 10px; letter-spacing: 0.06em; color: rgba(255,255,255,0.6); font-weight: 600; }
+
+/* Sidebar promo box */
+.sidebar-promo {
+  margin: 20px 16px 0 16px; padding: 16px;
+  background: rgba(255,255,255,0.06); border-radius: 10px;
+  color: rgba(255,255,255,0.85);
+}
+.sidebar-promo svg { color: #A9812F; margin-bottom: 8px; }
+.sidebar-promo p { font-size: 12px; line-height: 1.5; margin: 0; }
+
+/* Coming soon */
+.coming-soon { padding: 60px 0; text-align: center; }
+.coming-soon h2 { font-size: 20px; color: #0F172A; margin-bottom: 8px; }
+.coming-soon p { color: #64748B; font-size: 14px; }

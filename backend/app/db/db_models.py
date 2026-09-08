@@ -90,3 +90,14 @@ class User(Base):
     def __repr__(self):
         return f"<User username={self.username} role={self.role}>"
 
+class Category(Base):
+    __tablename__ = "categories"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, unique=True, nullable=False)
+    active = Column(Boolean, default=True)  # inactive categories are hidden without deleting history
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<Category name={self.name} active={self.active}>"
+

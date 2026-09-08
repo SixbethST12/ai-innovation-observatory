@@ -4,7 +4,15 @@ import Sidebar from './components/Sidebar'
 import OverviewPage from './components/OverviewPage'
 import PublicationsView from './components/PublicationsView'
 import TrendsView from './components/TrendsView'
+import ComingSoon from './components/ComingSoon'
 import './App.css'
+
+const COMING_SOON_TITLES = {
+  reports: 'Intelligence Reports',
+  knowledge: 'Knowledge Base',
+  alerts: 'Alerts & Notifications',
+  settings: 'Settings',
+}
 
 function App() {
   const [activePage, setActivePage] = useState('overview')
@@ -12,18 +20,28 @@ function App() {
 
   function handleNavbarSearch(query) {
     setSearchQuery(query)
-    setActivePage('publications')
+    setActivePage('search')
+  }
+
+  function handleNavigate(page) {
+    setActivePage(page)
+    if (page !== 'search') setSearchQuery(null)
   }
 
   return (
     <div className="app-shell">
       <Navbar onSearch={handleNavbarSearch} />
       <div className="app-body">
-        <Sidebar activePage={activePage} onNavigate={(page) => { setActivePage(page); setSearchQuery(null) }} />
+        <Sidebar activePage={activePage} onNavigate={handleNavigate} />
         <main className="main-content">
           {activePage === 'overview' && <OverviewPage />}
-          {activePage === 'publications' && <PublicationsView initialSearch={searchQuery} />}
+          {(activePage === 'publications' || activePage === 'search') && (
+            <PublicationsView initialSearch={searchQuery} />
+          )}
           {activePage === 'trends' && <TrendsView />}
+          {COMING_SOON_TITLES[activePage] && (
+            <ComingSoon title={COMING_SOON_TITLES[activePage]} />
+          )}
         </main>
       </div>
     </div>
