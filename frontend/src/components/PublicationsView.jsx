@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { getPublications, searchPublications } from '../api'
 import PublicationCard from './PublicationCard'
+import PublicationDetailModal from './PublicationDetailModal'
 
 const INSTITUTIONS = ['All', 'BIS', 'World Bank', 'Central Bank of Kenya', 'IMF']
 
@@ -11,6 +12,7 @@ function PublicationsView({ initialSearch } = {}) {
   const [institution, setInstitution] = useState('All')
   const [searchQuery, setSearchQuery] = useState(initialSearch || '')
   const [activeSearch, setActiveSearch] = useState(initialSearch || '')
+  const [selectedPub, setSelectedPub] = useState(null)
 
   useEffect(() => {
     setLoading(true)
@@ -85,10 +87,21 @@ function PublicationsView({ initialSearch } = {}) {
           <div className="publication-list">
             {publications.length === 0 && <p className="status">No results found.</p>}
             {publications.map((pub) => (
-              <PublicationCard key={pub.id} pub={pub} />
+              <PublicationCard
+                key={pub.id}
+                pub={pub}
+                onOpen={() => setSelectedPub(pub)}
+              />
             ))}
           </div>
         </>
+      )}
+
+      {selectedPub && (
+        <PublicationDetailModal
+          pub={selectedPub}
+          onClose={() => setSelectedPub(null)}
+        />
       )}
     </div>
   )

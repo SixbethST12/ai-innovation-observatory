@@ -1,6 +1,20 @@
-function PublicationCard({ pub }) {
+function PublicationCard({ pub, onOpen }) {
+  function handleKeyDown(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      onOpen?.()
+    }
+  }
+
   return (
-    <div className="publication-card">
+    <div
+      className="publication-card clickable"
+      onClick={onOpen}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
+      aria-label={`Open details for ${pub.title}`}
+    >
       <div className="card-header">
         <span className="institution-badge">{pub.institution}</span>
         {pub.published_date && (
@@ -8,7 +22,12 @@ function PublicationCard({ pub }) {
         )}
       </div>
       <h3>
-        <a href={pub.source_url} target="_blank" rel="noopener noreferrer">
+        <a
+          href={pub.source_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+        >
           {pub.title}
         </a>
       </h3>
