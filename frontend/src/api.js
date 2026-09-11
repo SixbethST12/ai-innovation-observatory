@@ -41,3 +41,8 @@ export async function getTimeline() {
   if (!res.ok) throw new Error(`API returned ${res.status}`)
   return res.json()
 }
+
+export function getRelevance(pub) {
+  const val = pub?.relevance ?? pub?.relevance_score ?? null
+  return typeof val === 'number' ? val : null
+}
