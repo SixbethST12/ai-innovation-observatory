@@ -46,3 +46,12 @@ export function getRelevance(pub) {
   const val = pub?.relevance ?? pub?.relevance_score ?? null
   return typeof val === 'number' ? val : null
 }
+
+// Reads a publication's relevance score if present. Currently always
+// returns null/undefined since relevance_score isn't in the backend
+// response yet (the numeric scoring work is paused - see relevance.py
+// history). This is intentional: the modal correctly shows "not
+// scored" rather than a fabricated number, until real scoring exists.
+export function getRelevance(pub) {
+  return pub?.relevance_score ?? null
+}
