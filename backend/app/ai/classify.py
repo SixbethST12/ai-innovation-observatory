@@ -1,36 +1,43 @@
 """
-Topic classification - FR-7, FR-8.
+Topic classification - FR-7, FR-8, NFR-7.
 
-Pure function: takes title + body text, returns a list of topics from
-the predefined category set. Multi-label allowed (FR-8).
+UPGRADED: categories now come from the database (categories table)
+instead of a hardcoded Python list. This is what makes NFR-7's
+"configurable without code redeployment" genuinely true - adding a
+new category means an INSERT into the categories table, not editing
+this file. Expanded from 4 to 11 categories per updated requirements.
 
-REVISION: added a worked example to the prompt (few-shot prompting)
-after the first version showed real accuracy problems in testing - a
-stablecoin regulation article was missing "Digital Finance" and CPI
-data was incorrectly tagged with it. This is documented directly from
-observed test failures, not a hypothetical improvement.
-
-Still validates the model's output against the fixed category list
-rather than trusting it blindly - that part was already correct and
-stays unchanged.
+Still validates the model's output against the current valid category
+list rather than trusting it blindly - unchanged from before.
 """
 
 try:
-    from .llm_client import generate, OllamaNotRunningError
+    from .llm_client import generate, OllamaNotRunningError, OllamaTimeoutError
 except ImportError:
-    from llm_client import generate, OllamaNotRunningError
+    from llm_client import generate, OllamaNotRunningError, OllamaTimeoutError
 
-VALID_TOPICS = [
-    "Monetary Policy",
-    "Financial Stability",
-    "Digital Finance",
-    "AI in Banking",
-]
+try:
+    from ..db.repository import get_active_categories
+except ImportError:
+    import sys
+    import os
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from db.repository import get_active_categories
 
 
 def classify(title: str, body_text: str) -> list:
+    """
+    Returns a list of 1+ topics from the current active categories
+    (read fresh from the database each call, not cached, so a newly
+    added category is picked up immediately without restarting anything).
+    """
+    valid_topics = get_active_categories()
+    if not valid_topics:
+        print("[classify] Warning: no active categories found in database")
+        return []
+
     content = body_text.strip() if body_text and body_text.strip() else "(no additional content provided)"
-    topic_list_str = ", ".join(VALID_TOPICS)
+    topic_list_str = ", ".join(valid_topics)
 
     prompt = f"""Classify a central banking publication into one or more of these EXACT categories: {topic_list_str}
 
@@ -51,7 +58,7 @@ Categories:"""
     candidates = [t.strip() for t in raw_response.split(",")]
     valid_found = []
     for candidate in candidates:
-        for valid_topic in VALID_TOPICS:
+        for valid_topic in valid_topics:
             if candidate.lower() == valid_topic.lower():
                 valid_found.append(valid_topic)
                 break
@@ -63,34 +70,24 @@ Categories:"""
 
 
 if __name__ == "__main__":
-    test_title = "IMF CPI Data - TZA - pulled 2026-08-31"
-    test_body = """IMF CPI (Consumer Price Index) for TZA:
-2026-01: 142.3
-2026-06: 146.2"""
+    print(f"Active categories: {get_active_categories()}")
+    print()
 
-    print("Test 1: CPI data record (expect Monetary Policy, NOT Digital Finance)")
+    test_title = "Regulating stablecoin issuance: permissible entities and activities"
+    test_body = "A briefing on which entities may issue stablecoins and what activities are permitted under new regulatory frameworks."
+    print("Test 1: stablecoin article")
     try:
         result = classify(test_title, test_body)
         print("Topics:", result)
-    except OllamaNotRunningError as e:
+    except (OllamaNotRunningError, OllamaTimeoutError) as e:
         print("ERROR:", e)
 
     print()
-    test_title2 = "Regulating stablecoin issuance: permissible entities and activities"
-    test_body2 = "A briefing on which entities may issue stablecoins and what activities are permitted under new regulatory frameworks."
-    print("Test 2: stablecoin article (expect Digital Finance)")
+    test_title2 = "Central bank cybersecurity framework for payment systems"
+    test_body2 = "New guidance on protecting critical payment infrastructure from cyber threats, covering both retail and wholesale payment systems."
+    print("Test 2: cybersecurity + payment systems article (new categories)")
     try:
         result2 = classify(test_title2, test_body2)
         print("Topics:", result2)
-    except OllamaNotRunningError as e:
-        print("ERROR:", e)
-
-    print()
-    test_title3 = "Supervisory screening with large language models: finding divergences"
-    test_body3 = "Examines how large language models can be used by supervisors to screen for divergences in bank reporting."
-    print("Test 3: real BIS record about LLMs in supervision (expect AI in Banking)")
-    try:
-        result3 = classify(test_title3, test_body3)
-        print("Topics:", result3)
-    except OllamaNotRunningError as e:
+    except (OllamaNotRunningError, OllamaTimeoutError) as e:
         print("ERROR:", e)

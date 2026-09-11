@@ -1,8 +1,15 @@
 const TOPIC_COLORS = {
   'Monetary Policy': '#3B82F6',
   'Financial Stability': '#14B8A6',
+  'Banking Regulation': '#6366F1',
+  'Financial Markets': '#0EA5E9',
   'Digital Finance': '#8B5CF6',
-  'AI in Banking': '#F59E0B',
+  'FinTech': '#EC4899',
+  'Artificial Intelligence': '#F59E0B',
+  'Payment Systems': '#10B981',
+  'Cybersecurity': '#EF4444',
+  'Climate and Sustainable Finance': '#22C55E',
+  'Financial Inclusion': '#F97316',
 }
 
 function TopicBars({ data }) {
@@ -24,7 +31,7 @@ function TopicBars({ data }) {
               }}
             />
           </div>
-          <div className="topic-bar-pct">{Math.round((count / total) * 100)}%</div>
+          <div className="topic-bar-pct">{total > 0 ? Math.round((count / total) * 100) : 0}%</div>
         </div>
       ))}
     </div>
